@@ -43,7 +43,7 @@ async def mesaj_yakalayici(event):
         if orijinal_mesaj:
             cevirisi = turkceye_cevir(orijinal_mesaj)
             await client.send_message('me', 
-                f"🇰🇷 **Koreli Arkadaş:** {cevirisi}\n"
+                f"🇰🇷 **{sender.first_name}:** {cevirisi}\n"
                 f"📝 *Orijinal:* {orijinal_mesaj}"
             )
 
