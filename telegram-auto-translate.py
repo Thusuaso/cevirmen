@@ -9,7 +9,7 @@ api_id = 36788592                   # Buraya kendi api_id'ni yaz
 api_hash = 'd695460e880cc1703a305cc52c2b2e08' # Buraya api_hash'i tırnak içinde yaz
 
 # 2. Konuştuğun kişinin kullanıcı adı (başında @ olmadan):
-hedef_kisi = '6801885855' 
+hedef_kisi = 6801885855
 
 # -------------------------------------
 # 1. Python 3.14 Hatasını Çözen Yama:
@@ -40,7 +40,7 @@ async def mesaj_yakalayici(event):
     # SENARYO 1: KARŞI TARAFTAN MESAJ GELDİĞİNDE
     if event.is_private and sender and sender.id == hedef_kisi:
         orijinal_mesaj = event.raw_text
-        if original_mesaj:
+        if orijinal_mesaj:
             cevirisi = turkceye_cevir(orijinal_mesaj)
             await client.send_message('me', 
                 f"🇰🇷 **Koreli Arkadaş:** {cevirisi}\n"
