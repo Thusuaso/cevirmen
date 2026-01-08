@@ -2,23 +2,22 @@ from telethon import TelegramClient, events
 from deep_translator import GoogleTranslator
 import asyncio
 
-# --- AYARLAR KISMI (BURAYI DOLDUR) ---
-
-# 1. my.telegram.org sitesinden aldığın sayılar ve kodlar:
+# --- AYARLAR ---
 api_id = 36788592                   # Buraya kendi api_id'ni yaz
 api_hash = 'd695460e880cc1703a305cc52c2b2e08' # Buraya api_hash'i tırnak içinde yaz
+# ---------------
 
-# 2. Konuştuğun kişinin kullanıcı adı (başında @ olmadan):
-hedef_kisi = 6801885855
-
-# -------------------------------------
-# 1. Python 3.14 Hatasını Çözen Yama:
-# Döngüyü (Loop) manuel olarak oluşturup tanımlıyoruz.
+# Python 3.14 Fix
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
-
-# 2. Client'ı oluştururken bu döngüyü kullanmasını söylüyoruz
 client = TelegramClient('benim_oturum', api_id, api_hash, loop=loop)
+
+def turkceye_cevir(metin):
+    try:
+        # Otomatik algıla ve Türkçeye çevir
+        return GoogleTranslator(source='auto', target='tr').translate(metin)
+    except:
+        return None
 
 def koreceye_cevir(metin):
     try:
@@ -26,43 +25,57 @@ def koreceye_cevir(metin):
     except Exception as e:
         return f"Hata: {e}"
 
-def turkceye_cevir(metin):
-    try:
-        return GoogleTranslator(source='ko', target='tr').translate(metin)
-    except Exception as e:
-        return f"Hata: {e}"
-
-@client.on(events.NewMessage)
-async def mesaj_yakalayici(event):
+# 1. GELEN MESAJLARI YAKALA (Gelen Kutusu)
+@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+async def gelen_mesajlar(event):
     sender = await event.get_sender()
-    # if event.is_private:
-    #     print(f"MESAJ GELDİ! Kimden ID: {sender.id} - Kullanıcı Adı: {sender.username}")
-    # SENARYO 1: KARŞI TARAFTAN MESAJ GELDİĞİNDE
-    if event.is_private and sender and sender.id == hedef_kisi:
-        orijinal_mesaj = event.raw_text
-        if orijinal_mesaj:
-            cevirisi = turkceye_cevir(orijinal_mesaj)
-            await client.send_message('me', 
-                f"🇰🇷 **{sender.first_name}:** {cevirisi}\n"
-                f"📝 *Orijinal:* {orijinal_mesaj}"
-            )
+    
+    if event.raw_text:
+        try:
+            orijinal = event.raw_text
+            cevirisi = turkceye_cevir(orijinal)
+            
+            # SPAM KORUMASI:
+            # Sadece çeviri orijinalden farklıysa (yani mesaj yabancı dildeyse) gönder.
+            if cevirisi and cevirisi.lower() != orijinal.lower():
+                
+                # --- İSİM ALMA KISMI ---
+                if sender:
+                    ad = sender.first_name if sender.first_name else ""
+                    soyad = sender.last_name if sender.last_name else ""
+                    # Ad ve soyadı birleştir, kenar boşluklarını temizle
+                    tam_isim = f"{ad} {soyad}".strip()
+                    
+                    # Eğer isim yoksa (gizliyse vs.)
+                    if not tam_isim:
+                        tam_isim = "Bilinmeyen Kullanıcı"
+                else:
+                    tam_isim = "Gizli Gönderici"
+                # -----------------------
 
-    # SENARYO 2: SEN MESAJ ATTIĞINDA (.ko ile başlıyorsa)
-    elif event.out and event.raw_text.startswith('.ko '):
+                # Kaydedilen Mesajlar'a (Saved Messages) Rapor
+                await client.send_message('me', 
+                    f"👤 **Gönderen:** {tam_isim}\n"
+                    f"🇹🇷 **Çeviri:** {cevirisi}\n"
+                    f"─────────────────\n"
+                    f"📝 `{orijinal}`"
+                )
+        except Exception:
+            pass
+
+# 2. GİDEN MESAJLARI YAKALA (.ko ile başlayanlar)
+@client.on(events.NewMessage(outgoing=True))
+async def giden_mesajlar(event):
+    if event.raw_text.startswith('.ko '):
         yazilacak_metin = event.raw_text[4:]
         await event.edit(f"{yazilacak_metin} (Çevriliyor...)")
         korece_hali = koreceye_cevir(yazilacak_metin)
         await event.edit(korece_hali)
 
-# --- ANA ÇALIŞTIRMA BLOĞU ---
 async def baslat():
-    print("Bot başlatılıyor... Telefon onayı gerekebilir.")
+    print("--- İSİM GÖSTEREN BOT AKTİF ---")
     await client.start()
-    print("--- SİSTEM AKTİF ---")
-    print("1. Karşıdan mesaj gelince 'Kaydedilen Mesajlar'a çevirisi düşecek.")
-    print("2. Sen cevap verirken '.ko Merhaba' yazarsan, otomatik Koreceye dönüşüp gidecek.")
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    # Python 3.14 uyumluluğu için döngüyü elle çalıştırıyoruz
     loop.run_until_complete(baslat())
