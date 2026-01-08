@@ -25,6 +25,12 @@ def koreceye_cevir(metin):
     except Exception as e:
         return f"Hata: {e}"
 
+def ingilizceye_cevir(metin):
+    try:
+        return GoogleTranslator(source='tr', target='en').translate(metin)
+    except Exception as e:
+        return f"Hata: {e}"
+
 # 1. GELEN MESAJLARI YAKALA (Gelen Kutusu)
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def gelen_mesajlar(event):
@@ -71,6 +77,11 @@ async def giden_mesajlar(event):
         await event.edit(f"{yazilacak_metin} (Çevriliyor...)")
         korece_hali = koreceye_cevir(yazilacak_metin)
         await event.edit(korece_hali)
+    if event.raw_text.startswith('.en'):
+        yazilacak_metin = event.raw_text[4:]
+        await event.edit(f"{yazilacak_metin} (Çevriliyor...)")
+        ingilizce_hali = ingilizceye_cevir(yazilacak_metin)
+        await event.edit(ingilizce_hali)
 
 async def baslat():
     print("--- İSİM GÖSTEREN BOT AKTİF ---")
